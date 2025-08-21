@@ -10,8 +10,8 @@ const rtcConfig = {
 };
 
 // URL вашего сервера (замените на ваш внешний IP)
-const SERVER_URL = 'http://localhost:8080';
-const WS_SERVER_URL = 'ws://localhost:8080';
+const SERVER_URL = 'https://zulfs.loca.lt';
+const WS_SERVER_URL = 'wss://zulfs.loca.lt'; // ВАЖНО: wss вместо https!
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
