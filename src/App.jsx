@@ -9,9 +9,9 @@ const rtcConfig = {
   ]
 };
 
-// URL вашего сервера (замените на ваш внешний IP)
-const SERVER_URL = 'https://zulfs.loca.lt';
-const WS_SERVER_URL = 'wss://zulfs.loca.lt';
+// URL вашего сервера
+const SERVER_URL = 'https://ee7031344d4e53ac4b5d0776b645bec4.serveo.net';
+const WS_SERVER_URL = 'wss://ee7031344d4e53ac4b5d0776b645bec4.serveo.net';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -61,7 +61,6 @@ export default function App() {
       }
     } catch (error) {
       console.error('Ошибка входа:', error);
-      // Для демо создаем пользователя локально, если сервер недоступен
       const user = {
         uid: 'user-' + Math.random().toString(36).substr(2, 9),
         email: data.email,
@@ -78,7 +77,6 @@ export default function App() {
     e.preventDefault();
     setLoginError('');
     
-    // Создаем пользователя локально
     const user = {
       uid: 'user-' + Math.random().toString(36).substr(2, 9),
       email: data.email,
@@ -90,10 +88,11 @@ export default function App() {
     setView('main');
   };
 
-  // Подключение к сигнальному серверу
+  // Подключение к сигнальному серверу (ОБНОВЛЕНО)
   const connectToSignalingServer = (userId, username) => {
     if (wsRef.current) {
       wsRef.current.close();
+      wsRef.current = null;
     }
     
     const ws = new WebSocket(`${WS_SERVER_URL}?userId=${userId}&username=${encodeURIComponent(username)}`);
@@ -251,14 +250,12 @@ export default function App() {
       audioElement.playsInline = true;
       audioElement.volume = 1.0;
       
-      // Добавляем локальные треки
       if (localStreamRef.current) {
         localStreamRef.current.getTracks().forEach(track => {
           pc.addTrack(track, localStreamRef.current);
         });
       }
       
-      // Обработка входящего потока
       pc.ontrack = (event) => {
         const [remoteStream] = event.streams;
         audioElement.srcObject = remoteStream;
@@ -266,7 +263,6 @@ export default function App() {
         console.log(`Получен аудиопоток от ${remoteUid}`);
       };
       
-      // Обработка ICE-кандидатов
       pc.onicecandidate = (event) => {
         if (event.candidate) {
           sendSignalingMessage({
@@ -283,7 +279,6 @@ export default function App() {
       
       peersRef.current.set(remoteUid, { pc, audioElement });
       
-      // Если мы инициаторы, создаем и отправляем offer
       if (isInitiator) {
         const offer = await pc.createOffer({ offerToReceiveAudio: true });
         await pc.setLocalDescription(offer);
@@ -304,13 +299,8 @@ export default function App() {
   const updateSpeakingStatus = (uid, speaking) => {
     setSpeakingUsers(prev => {
       const newSet = new Set(prev);
-      
-      if (speaking) {
-        newSet.add(uid);
-      } else {
-        newSet.delete(uid);
-      }
-      
+      if (speaking) newSet.add(uid);
+      else newSet.delete(uid);
       return newSet;
     });
   };
@@ -341,7 +331,6 @@ export default function App() {
         }
         
         analyser.getByteFrequencyData(dataArray);
-        
         const sum = dataArray.reduce((a, b) => a + b, 0);
         const average = sum / dataArray.length;
         
@@ -402,7 +391,6 @@ export default function App() {
         }
         
         analyser.getByteFrequencyData(dataArray);
-        
         const sum = dataArray.reduce((a, b) => a + b, 0);
         const average = sum / dataArray.length;
         const isLoud = average > 25;
@@ -434,7 +422,7 @@ export default function App() {
     }
   };
 
-  // Подключение к голосовому каналу
+  // Подключение к голосовому каналу (ОБНОВЛЕНО)
   const joinVoiceChannel = async () => {
     if (!currentUser || voiceEnabled) return;
     
@@ -442,7 +430,10 @@ export default function App() {
       setConnectionStatus('connecting');
       console.log('Подключение к голосовому каналу...');
       
-      // Получаем медиа поток
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+        connectToSignalingServer(currentUser.uid, currentUser.displayName);
+      }
+      
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: { 
           echoCancellation: true, 
@@ -455,10 +446,8 @@ export default function App() {
       setVoiceEnabled(true);
       setIsMuted(false);
       
-      // Настройка анализатора локального звука
       setupLocalVolumeAnalyser(stream);
       
-      // Подключаемся к другим пользователям
       for (const user of members) {
         if (user.uid !== currentUser.uid && !peersRef.current.has(user.uid)) {
           await createPeerConnection(user.uid, true);
@@ -471,28 +460,24 @@ export default function App() {
     } catch (e) {
       console.error('Ошибка подключения:', e);
       setConnectionStatus('error');
-      alert('Ошибка подключения к голосовому каналу. Проверьте разрешения микрофона.');
     }
   };
 
-  // Отключение от голосового канала
+  // Отключение от голосового канала (ОБНОВЛЕНО)
   const leaveVoiceChannel = async () => {
     setVoiceEnabled(false);
     setConnectionStatus('disconnected');
     
-    // Закрываем все peer соединения
     for (const [uid] of peersRef.current.entries()) {
       closePeerConnection(uid);
     }
     peersRef.current.clear();
     
-    // Останавливаем локальный поток
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => track.stop());
       localStreamRef.current = null;
     }
     
-    // Очищаем локальный анализатор
     if (localAnalyserRef.current) {
       localAnalyserRef.current.active = false;
       try {
@@ -503,7 +488,12 @@ export default function App() {
       localAnalyserRef.current = null;
     }
     
-    setMembers(prev => prev.filter(user => user.uid === currentUser.uid));
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    
+    setMembers(prev => prev.filter(user => user.uid === currentUser?.uid));
     setSpeakingUsers(new Set());
     setIsMuted(false);
     
@@ -525,7 +515,6 @@ export default function App() {
       peersRef.current.delete(uid);
     }
     
-    // Очистка анализатора
     const analyser = remoteAnalysersRef.current.get(uid);
     if (analyser) {
       analyser.active = false;
