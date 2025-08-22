@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/zulfs-frontend/static/css/main.1f7e01ea.css",
-    "main.js": "/zulfs-frontend/static/js/main.7b0c0958.js",
+    "main.css": "/zulfs-frontend/static/css/main.6a33d1eb.css",
+    "main.js": "/zulfs-frontend/static/js/main.2679abb7.js",
     "index.html": "/zulfs-frontend/index.html",
-    "main.1f7e01ea.css.map": "/zulfs-frontend/static/css/main.1f7e01ea.css.map",
-    "main.7b0c0958.js.map": "/zulfs-frontend/static/js/main.7b0c0958.js.map"
+    "main.6a33d1eb.css.map": "/zulfs-frontend/static/css/main.6a33d1eb.css.map",
+    "main.2679abb7.js.map": "/zulfs-frontend/static/js/main.2679abb7.js.map"
   },
   "entrypoints": [
-    "static/css/main.1f7e01ea.css",
-    "static/js/main.7b0c0958.js"
+    "static/css/main.6a33d1eb.css",
+    "static/js/main.2679abb7.js"
   ]
 }
